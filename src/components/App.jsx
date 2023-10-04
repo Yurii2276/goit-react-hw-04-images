@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import { useState, useEffect } from 'react';
 
 import css from './App.module.css';
 
@@ -9,108 +9,88 @@ import Modal from './Modal/Modal';
 import Searchbar from './Searchbar/Searchbar';
 import { findPictures } from '../servises/Api';
 
-export class App extends Component {
-  state = {
-    pictures: null,
-    isLoading: false,
-    error: null,
-    picThemSearch: null,
-    loadMore: false,
-    page: 1,
-    maxPage: null,
-    showModal: false,
-    selectedImage: null,
-  };
+export function App() {
+  const [pictures, setPictures] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [picThemSearch, setPicThemSearch] = useState(null);
+  const [loadMore, setLoadMore] = useState(false);
+  const [page, setPage] = useState(1);
+  const [maxPage, setMaxPage] = useState(null);
+  const [showModal, setShowModal] = useState(false);
+  const [selectedImage, setSelectedImage] = useState(null);
 
-  LoadThemOfPictures = async () => {
-    try {
-      this.setState({ isLoading: true });
-      const newPictures = await findPictures(
-        this.state.picThemSearch,
-        this.state.page
-      );
+  useEffect(() => {
+    if (!picThemSearch) return;
 
-      if (this.state.pictures) {
-        const addPictures = [...this.state.pictures.hits, ...newPictures.hits];
-        this.setState({ pictures: { hits: addPictures } });
-      } else {
-        this.setState({
-          pictures: newPictures,
-          maxPage: Math.ceil(newPictures.totalHits / 12),
-        });
+    const LoadThemOfPictures = async () => {
+      try {
+        setIsLoading(true);
+        const newPictures = await findPictures(picThemSearch, page);
+
+        if (pictures) {
+          const addPictures = [...pictures.hits, ...newPictures.hits];
+          setPictures(prevState => ({
+            ...prevState,
+            ...{ hits: addPictures },
+          }));
+        } else {
+          setPictures(newPictures);
+          setMaxPage(Math.ceil(newPictures.totalHits / 12));
+        }
+      } catch (error) {
+        setError(error.message);
+      } finally {
+        setIsLoading(false);
       }
-    } catch (error) {
-      this.setState({ error: error.message });
-    } finally {
-      this.setState({ isLoading: false });
-    }
+    };
+
+    LoadThemOfPictures();
+  }, [picThemSearch, page]);
+
+  const handleSubmitInput = inputData => {
+    setPicThemSearch(inputData);
+    setPage(1);
+    setPictures(null);
   };
 
-  componentDidUpdate(_, prevState) {
-    if (
-      prevState.picThemSearch !== this.state.picThemSearch ||
-      prevState.page !== this.state.page
-    ) {
-      this.LoadThemOfPictures();
-    }
-  }
-
-  handleSubmitInput = inputData => {
-    this.setState({
-      picThemSearch: inputData,
-      page: 1,
-      pictures: null,
-    });
+  const handleLoadMore = async () => {
+    const nextPage = page + 1;
+    setPage(nextPage);
   };
 
-  handleLoadMore = async () => {
-    const nextPage = this.state.page + 1;
-    this.setState({ page: nextPage });
-  };
-
-  handleImageClick = imageURL => {
-    this.setState({ selectedImage: imageURL, showModal: true });
+  const handleImageClick = imageURL => {
+    setSelectedImage(imageURL);
+    setShowModal(true);
     document.body.style.overflow = 'hidden';
   };
 
-  handleModalClose = () => {
-    this.setState({ selectedImage: null, showModal: false });
+  const handleModalClose = () => {
+    setSelectedImage(null);
+    setShowModal(false);
     document.body.style.overflow = 'auto';
   };
 
-  render() {
-    return (
-      <div>
-        <Searchbar onData={this.handleSubmitInput} />
+  return (
+    <div>
+      <Searchbar onData={handleSubmitInput} />
 
-        {this.state.error && <p className={css.error}>{this.state.error}</p>}
+      {error && <p className={css.error}>{error}</p>}
 
-        {this.state.picThemSearch && (
-          <ImageGallery
-            pictures={this.state.pictures}
-            onImageClick={this.handleImageClick}
-          />
-        )}
+      {picThemSearch && (
+        <ImageGallery pictures={pictures} onImageClick={handleImageClick} />
+      )}
 
-        <Loader
-          visible={this.state.isLoading}
-          className={css.galleryContainer}
-        />
+      <Loader visible={isLoading} className={css.galleryContainer} />
 
-        {this.state.page < this.state.maxPage && !this.state.loadMore && (
-          <Button
-            disabled={this.state.loadMore}
-            handleClick={this.handleLoadMore}
-          />
-        )}
+      {page < maxPage && !loadMore && (
+        <Button disabled={loadMore} handleClick={handleLoadMore} />
+      )}
 
-        {this.state.showModal && (
-          <Modal
-            image={this.state.selectedImage}
-            onRequestClose={this.handleModalClose}
-          />
-        )}
-      </div>
-    );
-  }
+      {showModal && (
+        <Modal image={selectedImage} onRequestClose={handleModalClose} />
+      )}
+    </div>
+  );
 }
+
