@@ -14,11 +14,14 @@ export function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [picThemSearch, setPicThemSearch] = useState(null);
-  const [loadMore, setLoadMore] = useState(false);
+  // const [loadMore, setLoadMore] = useState(false);
   const [page, setPage] = useState(1);
   const [maxPage, setMaxPage] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
+
+  const loadMore = false;
+
 
   useEffect(() => {
     if (!picThemSearch) return;
@@ -28,7 +31,7 @@ export function App() {
         setIsLoading(true);
         const newPictures = await findPictures(picThemSearch, page);
 
-        if (pictures) {
+        if (pictures && pictures.hits.length > 0) {
           const addPictures = [...pictures.hits, ...newPictures.hits];
           setPictures(prevState => ({
             ...prevState,
@@ -46,6 +49,7 @@ export function App() {
     };
 
     LoadThemOfPictures();
+    // eslint-disable-next-line
   }, [picThemSearch, page]);
 
   const handleSubmitInput = inputData => {
